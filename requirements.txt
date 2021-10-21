@@ -1,0 +1,9 @@
+gym
+numpy
+pettingzoo
+ray[rllib]
+pandas
+torch
+pytest
+tensorboard
+tensorFlow
