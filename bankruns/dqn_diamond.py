@@ -2,7 +2,7 @@ import os
 
 import ray
 from ray import tune
-from ray.rllib.agents.pg import PGTrainer
+from ray.rllib.agents.dqn import DQNTrainer
 from ray.tune.registry import register_env
 import gym
 import numpy as np
@@ -28,7 +28,7 @@ def main(debug, stop_iters=30000, tf=True):
     register_env("diamond", env_creator)
 
     tune_analysis = tune.run(
-        PGTrainer,
+        DQNTrainer,
         config=rllib_config,
         stop=stop_config,
         checkpoint_at_end=True,
@@ -61,6 +61,7 @@ def get_rllib_config(seeds, debug=False, stop_iters=50, tf=True):
     }
 
     def policy_mapping_fn(agent_id, episode, worker, **kwargs):
+        print(agent_id)
         assert agent_id in policies.keys()
         return str(agent_id)
 
