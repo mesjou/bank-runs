@@ -19,7 +19,7 @@ class DiamondDiscrete(MultiAgentEnv, ABC):
         seed=None,
         env_name="Diamond",
         max_steps=200,
-        r=1.3,
+        coop=0.3,
         R=2.0,
     ):
         self.num_agents = num_agents
@@ -29,12 +29,18 @@ class DiamondDiscrete(MultiAgentEnv, ABC):
         self.action_space = gym.spaces.Discrete(2)
         self.observation_space = gym.spaces.Discrete(2)
 
-        assert 1.0 < r < R, "Incentives in returns must be fulfilled"
-        self.r = r
         self.R = R
+
+        assert 0.01 <= coop <= 1.0, "Incentives in returns must be fulfilled"
+        self.r = self.coordination_parameter(coop)
+        print("r:", self.r, "R:", self.R, "coop:", coop)
+        assert 1.0 < self.r <= self.R, "Incentives in returns must be fulfilled"
 
         self.seed(seed)
         self.metadata = {'name': env_name}
+
+    def coordination_parameter(self, coop):
+        return 1.0 / (1.0 - coop * (self.R - 1.0) / self.R)
 
     @override(MultiAgentEnv)
     def seed(self, seed=None):
