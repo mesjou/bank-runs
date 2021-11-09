@@ -11,8 +11,8 @@ if __name__ == "__main__":
     frame = cv2.imread(os.path.join(image_folder, images[0]))
     height, width, layers = frame.shape
 
-    # _fourcc = cv2.VideoWriter_fourcc(*'MP4')
-    video = cv2.VideoWriter(video_name, 1, 15, (width, height))
+    _fourcc = cv2.VideoWriter_fourcc(*"mp4V")
+    video = cv2.VideoWriter(video_name, _fourcc, 15, (width, height))
 
     for image in images:
         video.write(cv2.imread(os.path.join(image_folder, image)))
