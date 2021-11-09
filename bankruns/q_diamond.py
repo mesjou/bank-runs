@@ -1,21 +1,20 @@
-from bankruns.env_discrete import DiamondDiscrete
-from bankruns.agents.q_learning import QLearner
 import numpy as np
+from bankruns.agents.q_learning import QLearner
+from bankruns.env_discrete import DiamondDiscrete
 
 
 def decay_policy(init_value, end_value, step, end_after):
     return max([init_value - (init_value - end_value) / end_after * step, end_value])
 
 
-if __name__ == "__main__":
+def run_diamond(num_agents=5, coop=0.01, max_steps=200, decay_schedule=True):
 
     # init policies
-    num_agents = 5
-    env = DiamondDiscrete(num_agents)
+    env = DiamondDiscrete(num_agents, max_steps=max_steps, coop=coop)
     policies = {f"agent-{n}": QLearner(env.observation_space.n, env.action_space.n) for n in range(num_agents)}
-    decay_schedule = True
 
     done = False
+    action_history = []
     obs = env.reset()
     while not done:
 
@@ -33,10 +32,14 @@ if __name__ == "__main__":
         for agent_id, agent in policies.items():
             agent.learn(obs[agent_id], actions[agent_id], rew[agent_id], next_obs[agent_id])
 
-        print("\n Run or no run: ", np.array(list(actions.values())).mean())
-        # print("Learning_rate: ", agent.get_learning_rate())
-        # print("Epsilon: ", agent.get_epsilon())
+        action_history.append([a for agent, a in sorted(actions.items())])
+        print("Run or no run: ", np.array(list(actions.values())).mean())
 
         obs = next_obs
 
     print("Training finished.\n")
+    return np.array(action_history)
+
+
+if __name__ == "__main__":
+    run_diamond(10)
