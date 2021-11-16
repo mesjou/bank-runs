@@ -30,12 +30,14 @@ def plot(results, human):
     sd_human = np.nanstd(human, axis=0)
     mean_rl = [results[coop][:, int(max_steps / 1.5) :, :].mean() * 10 for coop in cooperation_values]
     sd_rl = [(results[coop][:, int(max_steps / 1.5) :, :] * 10).std() for coop in cooperation_values]
+    # mean_rl = [results[coop].mean() * 10 for coop in cooperation_values]
+    # sd_rl = [(results[coop] * 10).std() for coop in cooperation_values]
 
     fig, ax = plt.subplots()
     plt.gcf().set_size_inches(w=5.5, h=3.0, forward=True)
-    ax.plot(cooperation_values, mean_human, linestyle="solid", color="#3b87be", linewidth=1.0, label="Humans")
+    ax.plot(cooperation_values, mean_human, linestyle="solid", color="#3b87be", linewidth=1.0, label="Menschen")
     ax.fill_between(cooperation_values, mean_human - sd_human, mean_human + sd_human, color="#d4e6f1", alpha=0.4)
-    ax.plot(cooperation_values, mean_rl, linestyle="solid", color="#930c26", linewidth=1.0, label="AI Agents")
+    ax.plot(cooperation_values, mean_rl, linestyle="solid", color="#930c26", linewidth=1.0, label="KI")
     ax.fill_between(
         cooperation_values,
         np.array(mean_rl) - np.array(sd_rl),
@@ -43,9 +45,10 @@ def plot(results, human):
         color="#f7b596",
         alpha=0.4,
     )
-    plt.ylabel(r"Number of Runs")
+    plt.ylabel(r"Anzahl Paniker")
     ax.set_ylim([0, 10])
-    ax.set_xlabel("Cooperation Value")
+    ax.set_xlabel("Kurzfristige Auszahlung")
+    ax.set_xticklabels([])
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     plt.legend()
@@ -54,11 +57,11 @@ def plot(results, human):
 
     fig, ax = plt.subplots()
     plt.gcf().set_size_inches(w=5.5, h=3.0, forward=True)
-    ax.plot(cooperation_values, mean_human, linestyle="solid", color="#3b87be", linewidth=1.0, label="Humans")
+    ax.plot(cooperation_values, mean_human, linestyle="solid", color="#3b87be", linewidth=1.0, label="Menschen")
     ax.fill_between(cooperation_values, mean_human - sd_human, mean_human + sd_human, color="#d4e6f1", alpha=0.4)
-    plt.ylabel(r"Number of Runs")
+    plt.ylabel(r"Anzahl Paniker")
     ax.set_ylim([0, 10])
-    ax.set_xlabel("Cooperation Value")
+    ax.set_xlabel("Kurzfristige Auszahlung")
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     plt.legend()
