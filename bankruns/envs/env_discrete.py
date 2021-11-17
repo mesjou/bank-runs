@@ -1,26 +1,21 @@
 import logging
+from abc import ABC
+
+import gym
 import numpy as np
 from gym.utils import seeding
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
-from abc import ABC
-from ray.rllib.utils.typing import MultiAgentDict
 from ray.rllib.utils import override
-import gym
-
+from ray.rllib.utils.typing import MultiAgentDict
 
 logger = logging.getLogger(__name__)
 
 
 class DiamondDiscrete(MultiAgentEnv, ABC):
     """Environment that implements Diamond game. Action=1 means early withdraw, action=0 means hold at bank."""
+
     def __init__(
-        self,
-        num_agents,
-        seed=None,
-        env_name="Diamond",
-        max_steps=200,
-        coop=0.3,
-        R=2.0,
+        self, num_agents, seed=None, env_name="Diamond", max_steps=200, coop=0.3, R=2.0,
     ):
         self.num_agents = num_agents
         self.agents = [f"agent-{n}" for n in range(self.num_agents)]
@@ -37,7 +32,7 @@ class DiamondDiscrete(MultiAgentEnv, ABC):
         assert 1.0 < self.r <= self.R, "Incentives in returns must be fulfilled"
 
         self.seed(seed)
-        self.metadata = {'name': env_name}
+        self.metadata = {"name": env_name}
 
     def coordination_parameter(self, coop):
         return 1.0 / (1.0 - coop * (self.R - 1.0) / self.R)

@@ -1,15 +1,14 @@
 import os
 
+import gym
+import numpy as np
 import ray
+from bankruns.envs.env import Diamond
+from bankruns.utils import log, miscellaneous
+from bankruns.utils.callbacks import SimpleCallback
 from ray import tune
 from ray.rllib.agents.pg import PGTrainer
 from ray.tune.registry import register_env
-import gym
-import numpy as np
-
-from bankruns.env import Diamond
-from bankruns.utils import log, miscellaneous
-from bankruns.utils.callbacks import SimpleCallback
 
 
 def env_creator(env_config):
@@ -34,7 +33,7 @@ def main(debug, stop_iters=30000, tf=True):
         checkpoint_at_end=True,
         name=exp_name,
         log_to_file=True,
-        local_dir=path
+        local_dir=path,
     )
     ray.shutdown()
     return tune_analysis
@@ -69,14 +68,14 @@ def get_rllib_config(seeds, debug=False, stop_iters=50, tf=True):
         "env_config": env_config,
         "multiagent": {
             "policies": policies,
-            #"policies": {
+            # "policies": {
             #    f"agent-{n}": (
             #        None,
             #        OBSERVATION_SPACE,
             #        ACTION_SPACE,
             #        {},
             #    ) for n in range(env_config["num_agents"])
-            #},
+            # },
             "policy_mapping_fn": policy_mapping_fn,
         },
         "seed": tune.grid_search(seeds),
