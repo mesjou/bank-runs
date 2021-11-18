@@ -24,26 +24,32 @@ class KydlandPrescott(MultiAgentEnv, ABC):
         max_steps=5000,
         natural_unemployment=5.5,
     ):
-        self.num_agents = 1.0
-        self.agents = ["cb"]
-        self.num_hh = num_hh
-        self.max_steps = max_steps
-        self.step_count_in_current_episode = None
+        # gym api
         self.action_space = gym.spaces.Discrete(2)  # todo change to two dimensional
         self.observation_space = gym.spaces.Discrete(3)
 
+        # hyperparameter
+        self.num_agents = 1
+        self.num_hh = num_hh
+        self.max_steps = max_steps
         assert 0.0 < natural_unemployment <= 1.0, "Natural unemployment must lie above 0 and max 1.0"
         self.natural_unemployment = natural_unemployment
-        self.fraction_believer = fraction_believer
-        self.unemployment = natural_unemployment
-        self.direction_unemployment: int = 0
-        self.inflation = 0.0
-
         assert isinstance(num_imitation, int)
         assert num_imitation % 2.0 == 0.0, "Num imitation must be a multiple of 2"
         assert num_imitation <= num_hh, "Number of imitators must not exceed number of household"
         self.num_imitation = num_imitation
 
+        # storage
+        self.agents = ["cb"]
+        self.step_count_in_current_episode = None
+        self.fraction_believer = fraction_believer
+        self.direction_believer: int = 0
+        self.unemployment = natural_unemployment
+        self.direction_unemployment: int = 0
+        self.inflation = 0.0
+        self.direction_inflation: int = 0
+
+        # misc
         self.seed(seed)
         self.metadata = {"name": env_name}
 
@@ -75,70 +81,71 @@ class KydlandPrescott(MultiAgentEnv, ABC):
             else:
                 h2 = h1.__class__
 
-    def _get_fractions(self):
-        """Get fraction of belivers and non-belivers.
-        Calculate new fraction of believers, direction of change and update fraction of belivers attribute.
-
-        :returns
-        fraction of non belivers
-        direction of change: 1 if fraction belivers increase, else 0
-
-        """
-
-        fraction_beliver = np.mean([isinstance(hh, Believer) for hh in self.hh])
-        direction = 1 if self.fraction_believer < fraction_beliver else 0
-        self.fraction_believer = fraction_beliver
-
-        return fraction_beliver, direction
-
     def _observe(self):
         """Define the observation of each agent.
 
-        CB and hh observe:
-        1. Past rate of unemployment: ut−1;
-        2. Direction of inflation: ∆yt = 1 if yt−2 < yt−1 0 otherwise
-        3. Direction of unemployment: ∆ut = 1 if ut−2 < ut−1 0 otherwise
+        The central bank observes:
+        1. Rate of unemployment: ut
+        2. Direction of unemployment: ∆ut = 1 if ut−1 < ut 0 otherwise
+        3. Direction of inflation: ∆yt = 1 if yt−1 < yt 0 otherwise
+        4. Fraction of believer: φt
+        5. Direction of believer: ∆φt = 1 if φt−1 < φt 0 otherwise
 
-        cb actions: inflation, announced_inflation
         """
 
-        self._hh_imitate()
-        fraction_beliver, direction_believer = self._get_fractions()
         obs = {
-            "unemployment": self.natural_unemployment,
-            "unemployment_direction": 1.0,
-            "inflation_direction": 1.0,
-            "fraction_beliver": fraction_beliver,
-            "fraction_beliver_direction": direction_believer,
+            "unemployment": self.unemployment,
+            "direction_unemployment": self.direction_unemployment,
+            "direction_inflation": self.direction_inflation,
+            "fraction_beliver": self.fraction_believer,
+            "direction_believer": self.direction_believer,
         }
-        return [obs]
+        return obs
 
-    def _rewards(self, actions: np.array):
-        """Calculate reward of central bank."""
-        # todo split into several functions -> too much going on here
-        expected_inflation = self.hh_forecast(actions[0])
-        unemployment = self.augmented_philips_curve(actions[1], np.mean(expected_inflation))
-        self.direction_unemployment = 1 if self.unemployment < unemployment else 0
-        for hh, expectation in zip(self.hh, expected_inflation):
-            hh.set_utility(expectation, actions[1])
-        reward = welfare(unemployment, actions[1])
-        self.unemployment = unemployment
-        return [reward]
+    def _rewards(self, unemployment, inflation):
+        """Calculate reward of central bank: the welfare of the economy."""
+        return (np.square(unemployment) + np.square(inflation)) / -2.0
 
     @override(MultiAgentEnv)
     def step(self, action_dict):
         self.step_count_in_current_episode += 1
 
-        rew = self._rewards(action_dict["cb"])
+        # cb announce inflation and hh build expectation
+        announced_inflation = action_dict["cb"][0]
+        expected_inflation = self.hh_forecast(announced_inflation)
+
+        # cb sets inflation rate
+        inflation = action_dict["cb"][1]
+        self.direction_inflation = 1 if self.inflation < inflation else 0
+        self.inflation = inflation
+
+        # hh earn utility and update forecast rule
+        for hh, expectation in zip(self.hh, expected_inflation):
+            hh.set_utility(expectation, inflation)
+            hh.adapt_forecast(inflation, expectation)
+
+        # hh imitate each other
+        self._hh_imitate()
+        fraction_beliver = np.mean([isinstance(hh, Believer) for hh in self.hh])
+        self.direction_believer = 1 if self.fraction_believer < fraction_beliver else 0
+        self.fraction_believer = fraction_beliver
+
+        # unemployment arises
+        unemployment = self.augmented_philips_curve(inflation, np.mean(expected_inflation))
+        self.direction_unemployment = 1 if self.unemployment < unemployment else 0
+        self.unemployment = unemployment
+
+        # create return
+        rew = self._rewards(unemployment, inflation)
         obs = self._observe()
         done = self.step_count_in_current_episode >= self.max_steps
         info = {}
 
         return self._to_rllib_api(obs, rew, done, info)
 
-    def _to_rllib_api(self, observation, rewards, dones, info):
+    def _to_rllib_api(self, observation, reward, dones, info):
         observations = {agent: observation for agent in self.agents}
-        rewards = {agent: rewards[i] for i, agent in enumerate(self.agents)}
+        rewards = {agent: reward for agent in self.agents}
         dones = {agent: dones for agent in self.agents + ["__all__"]}
         infos = {agent: info for agent in self.agents}
         return observations, rewards, dones, infos
@@ -162,14 +169,10 @@ class KydlandPrescott(MultiAgentEnv, ABC):
         return self.natural_unemployment - inflation + mean_expectations
 
 
-def welfare(unemployment, inflation):
-    """Welfare of the economy observed by the cb."""
-    return (np.square(unemployment) + np.square(inflation)) / -2.0
-
-
 class Believer(ABC):
     def __init__(self):
         self.utility = 0.0
+        self.forecast_costs = 0.0
 
     def forecast(self, announced_inflation, natural_unemployment):
         return announced_inflation
@@ -179,7 +182,7 @@ class Believer(ABC):
 
     def set_utility(self, expectation: float, inflation: float):
         """Utility of the household agents."""
-        self.utility = (np.square(inflation - expectation) + np.square(inflation)) / -2.0
+        self.utility = (np.square(inflation - expectation) + np.square(inflation)) / -2.0 - self.forecast_costs
 
 
 class NonBeliever(Believer):
