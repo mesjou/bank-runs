@@ -1,5 +1,6 @@
 import logging
 from abc import ABC
+from typing import List
 
 import gym
 import numpy as np
@@ -29,24 +30,24 @@ class KydlandPrescott(MultiAgentEnv, ABC):
         self.observation_space = gym.spaces.Discrete(3)
 
         # hyperparameter
-        self.num_agents = 1
-        self.num_hh = num_hh
-        self.max_steps = max_steps
+        self.num_agents: int = 1
+        self.num_hh: int = num_hh
+        self.max_steps: int = max_steps
         assert 0.0 < natural_unemployment <= 1.0, "Natural unemployment must lie above 0 and max 1.0"
-        self.natural_unemployment = natural_unemployment
+        self.natural_unemployment: float = natural_unemployment
         assert isinstance(num_imitation, int)
         assert num_imitation % 2.0 == 0.0, "Num imitation must be a multiple of 2"
         assert num_imitation <= num_hh, "Number of imitators must not exceed number of household"
-        self.num_imitation = num_imitation
+        self.num_imitation: int = num_imitation
 
         # storage
-        self.agents = ["cb"]
-        self.step_count_in_current_episode = None
-        self.fraction_believer = fraction_believer
+        self.agents: List = ["cb"]
+        self.step_count_in_current_episode: int = 0
+        self.fraction_believer: float = fraction_believer
         self.direction_believer: int = 0
-        self.unemployment = natural_unemployment
+        self.unemployment: float = natural_unemployment
         self.direction_unemployment: int = 0
-        self.inflation = 0.0
+        self.inflation: float = 0.0
         self.direction_inflation: int = 0
 
         # misc
@@ -64,22 +65,6 @@ class KydlandPrescott(MultiAgentEnv, ABC):
         self._reset_hh()
         obs = self._observe()
         return {agent: obs for agent in self.agents}
-
-    def _reset_hh(self):
-        self.hh = np.random.choice(
-            [Believer(), NonBeliever()], self.num_hh, p=[self.fraction_believer, 1 - self.fraction_believer]
-        )
-
-    def _hh_imitate(self):
-        """Draw number of hh from list, match them, then update their status"""
-        hh_meeting = np.random.choice(self.hh, self.num_imitation, replace=False)
-        hh1 = hh_meeting[: len(hh_meeting) // 2]
-        hh2 = hh_meeting[len(hh_meeting) // 2 :]
-        for h1, h2 in zip(hh1, hh2):
-            if h1.utility > h2.utility:
-                h1 = h2.__class__
-            else:
-                h2 = h1.__class__
 
     def _observe(self):
         """Define the observation of each agent.
@@ -112,7 +97,7 @@ class KydlandPrescott(MultiAgentEnv, ABC):
 
         # cb announce inflation and hh build expectation
         announced_inflation = action_dict["cb"][0]
-        expected_inflation = self.hh_forecast(announced_inflation)
+        expected_inflation = self._hh_forecast(announced_inflation)
 
         # cb sets inflation rate
         inflation = action_dict["cb"][1]
@@ -131,7 +116,7 @@ class KydlandPrescott(MultiAgentEnv, ABC):
         self.fraction_believer = fraction_beliver
 
         # unemployment arises
-        unemployment = self.augmented_philips_curve(inflation, np.mean(expected_inflation))
+        unemployment = self._augmented_philips_curve(inflation, np.mean(expected_inflation))
         self.direction_unemployment = 1 if self.unemployment < unemployment else 0
         self.unemployment = unemployment
 
@@ -157,11 +142,27 @@ class KydlandPrescott(MultiAgentEnv, ABC):
                 actions[i] = action_dict[agent]
         return actions
 
-    def hh_forecast(self, announced_inflation):
-        expected_inflation = [self.hh.forecast(announced_inflation)]
+    def _reset_hh(self):
+        self.hh = np.random.choice(
+            [Believer(), NonBeliever()], self.num_hh, p=[self.fraction_believer, 1 - self.fraction_believer]
+        )
+
+    def _hh_imitate(self):
+        """Draw number of hh from list, match them, then update their status"""
+        hh_meeting = np.random.choice(self.hh, self.num_imitation, replace=False)
+        hh1 = hh_meeting[: len(hh_meeting) // 2]
+        hh2 = hh_meeting[len(hh_meeting) // 2 :]
+        for h1, h2 in zip(hh1, hh2):
+            if h1.utility > h2.utility:
+                h1 = h2.__class__
+            else:
+                h2 = h1.__class__
+
+    def _hh_forecast(self, announced_inflation):
+        expected_inflation = [hh.forecast(announced_inflation) for hh in self.hh]
         return expected_inflation
 
-    def augmented_philips_curve(self, inflation, mean_expectations):
+    def _augmented_philips_curve(self, inflation, mean_expectations):
         """The augmented philips curve.
 
         :return unemployment
