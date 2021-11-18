@@ -1,7 +1,7 @@
 import pytest
 
 import numpy as np
-from bankruns.envs.env_discrete import DiamondDiscrete
+from bankruns.envs.diamond_discrete import DiamondDiscrete
 
 
 def test_env():

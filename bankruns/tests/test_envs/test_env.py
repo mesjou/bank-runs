@@ -1,6 +1,6 @@
 import pytest
 
-from bankruns.envs.env import Diamond
+from bankruns.envs.diamond_continous import Diamond
 
 
 def test_env():

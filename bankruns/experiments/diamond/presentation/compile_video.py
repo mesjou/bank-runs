@@ -3,8 +3,8 @@ import os
 import cv2
 
 if __name__ == "__main__":
-    image_folder = "presentation/02"
-    video_name = "presentation/02.mp4"
+    image_folder = "02"
+    video_name = "02.mp4"
 
     images = [img for img in os.listdir(image_folder) if img.endswith(".png")]
     images.sort()

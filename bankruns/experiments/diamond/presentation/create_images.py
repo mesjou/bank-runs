@@ -1,7 +1,7 @@
 from collections import Counter
 
 import matplotlib.pyplot as plt
-from bankruns.q_diamond import run_diamond
+from bankruns.experiments.diamond.q_diamond import run_diamond
 
 coop = 0.2
 num_agents = 10

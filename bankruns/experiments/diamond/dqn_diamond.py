@@ -3,7 +3,7 @@ import os
 import gym
 import numpy as np
 import ray
-from bankruns.envs.env import Diamond
+from bankruns.envs.diamond_continous import Diamond
 from bankruns.utils import log, miscellaneous
 from bankruns.utils.callbacks import SimpleCallback
 from ray import tune
