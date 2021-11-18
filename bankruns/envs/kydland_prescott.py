@@ -1,10 +1,10 @@
 import logging
+import random
 from abc import ABC
 from typing import List
 
 import gym
 import numpy as np
-from gym.utils import seeding
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 from ray.rllib.utils import override
 from ray.rllib.utils.typing import MultiAgentDict
@@ -23,7 +23,7 @@ class KydlandPrescott(MultiAgentEnv, ABC):
         seed=None,
         env_name="KydlandPrescott",
         max_steps=5000,
-        natural_unemployment=5.5,
+        natural_unemployment=0.055,
     ):
         # gym api
         self.action_space = gym.spaces.Discrete(2)  # todo change to two dimensional
@@ -42,6 +42,7 @@ class KydlandPrescott(MultiAgentEnv, ABC):
 
         # storage
         self.agents: List = ["cb"]
+        self.hh: List = []
         self.step_count_in_current_episode: int = 0
         self.fraction_believer: float = fraction_believer
         self.direction_believer: int = 0
@@ -51,13 +52,23 @@ class KydlandPrescott(MultiAgentEnv, ABC):
         self.direction_inflation: int = 0
 
         # misc
-        self.seed(seed)
+        if seed is not None:
+            self.seed(seed)
         self.metadata = {"name": env_name}
 
-    @override(MultiAgentEnv)
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
+    @staticmethod
+    def seed(seed):
+        """Sets the numpy and built-in random number generator seed.
+        Args:
+            seed (int, float): Seed value to use. Must be > 0. Converted to int
+                internally if provided value is a float.
+        """
+        assert isinstance(seed, (int, float))
+        seed = int(seed)
+        assert seed > 0
+
+        np.random.seed(seed)
+        random.seed(seed)
 
     @override(MultiAgentEnv)
     def reset(self):
@@ -145,21 +156,25 @@ class KydlandPrescott(MultiAgentEnv, ABC):
     def _reset_hh(self):
         self.hh = np.random.choice(
             [Believer(), NonBeliever()], self.num_hh, p=[self.fraction_believer, 1 - self.fraction_believer]
-        )
+        ).tolist()
 
     def _hh_imitate(self):
         """Draw number of hh from list, match them, then update their status"""
-        hh_meeting = np.random.choice(self.hh, self.num_imitation, replace=False)
-        hh1 = hh_meeting[: len(hh_meeting) // 2]
-        hh2 = hh_meeting[len(hh_meeting) // 2 :]
-        for h1, h2 in zip(hh1, hh2):
-            if h1.utility > h2.utility:
-                h1 = h2.__class__
+        hh_meeting_idx = np.random.choice(range(self.num_hh), self.num_imitation, replace=False)
+        hh1_idx = hh_meeting_idx[: len(hh_meeting_idx) // 2]
+        hh2_idx = hh_meeting_idx[len(hh_meeting_idx) // 2 :]
+        for h1, h2 in zip(hh1_idx, hh2_idx):
+            if self.hh[h1].__class__.__name__ == self.hh[h2].__class__.__name__:
+                continue
+            elif self.hh[h1].utility > self.hh[h2].utility:
+                self.hh[h2] = self.hh[h1].__class__()
             else:
-                h2 = h1.__class__
+                self.hh[h1] = self.hh[h2].__class__()
 
     def _hh_forecast(self, announced_inflation):
-        expected_inflation = [hh.forecast(announced_inflation) for hh in self.hh]
+        expected_inflation = [
+            hh.forecast(announced_inflation, self.natural_unemployment, self.fraction_believer) for hh in self.hh
+        ]
         return expected_inflation
 
     def _augmented_philips_curve(self, inflation, mean_expectations):
@@ -175,7 +190,7 @@ class Believer(ABC):
         self.utility = 0.0
         self.forecast_costs = 0.0
 
-    def forecast(self, announced_inflation, natural_unemployment):
+    def forecast(self, announced_inflation, natural_unemployment, fraction_believer):
         return announced_inflation
 
     def adapt_forecast(self, inflation, expected_inflation):
@@ -196,5 +211,7 @@ class NonBeliever(Believer):
     def adapt_forecast(self, inflation, expected_inflation):
         self.forecast_error += self.learning_rate * (inflation - expected_inflation)
 
-    def forecast(self, announced_inflation, natural_unemployment):
-        return announced_inflation + natural_unemployment + self.forecast_error - self.forecast_costs
+    def forecast(self, announced_inflation, natural_unemployment, fraction_believer):
+        return (fraction_believer * announced_inflation + natural_unemployment) / (
+            1 + fraction_believer
+        ) + self.forecast_error
