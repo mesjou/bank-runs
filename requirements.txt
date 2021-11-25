@@ -6,4 +6,5 @@ pandas
 torch
 pytest
 tensorboard
-tensorFlow
+tensorflow
+stable-baseline

@@ -23,17 +23,17 @@ class KydlandPrescott(MultiAgentEnv, ABC):
         seed=None,
         env_name="KydlandPrescott",
         max_steps=5000,
-        natural_unemployment=0.055,
+        natural_unemployment=5.5,
     ):
         # gym api
-        self.action_space = gym.spaces.Discrete(2)  # todo change to two dimensional
-        self.observation_space = gym.spaces.Discrete(3)
+        self.action_space = gym.spaces.Box(low=float("-inf"), high=float("inf"), shape=[2])
+        self.observation_space = gym.spaces.Box(low=float("-inf"), high=float("inf"), shape=[5])
 
         # hyperparameter
         self.num_agents: int = 1
         self.num_hh: int = num_hh
         self.max_steps: int = max_steps
-        assert 0.0 < natural_unemployment <= 1.0, "Natural unemployment must lie above 0 and max 1.0"
+        assert 0.0 < natural_unemployment <= 100.0, "Natural unemployment must lie above 0% and max 100%"
         self.natural_unemployment: float = natural_unemployment
         assert isinstance(num_imitation, int)
         assert num_imitation % 2.0 == 0.0, "Num imitation must be a multiple of 2"
