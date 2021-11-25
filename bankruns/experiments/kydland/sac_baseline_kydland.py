@@ -4,13 +4,14 @@ import ray
 from bankruns.envs.kydland_prescott import KydlandPrescott
 from bankruns.utils import log, miscellaneous
 from bankruns.utils.callbacks import SimpleCallback
+from bankruns.utils.wrappers import MultiToSingle
 from ray import tune
 from ray.rllib.agents.sac import SACTrainer
 from ray.tune.registry import register_env
 
 
 def env_creator(env_config):
-    return KydlandPrescott(**env_config)
+    return MultiToSingle(KydlandPrescott(**env_config))
 
 
 def main(debug, stop_iters=30000, tf=True):
@@ -38,44 +39,45 @@ def main(debug, stop_iters=30000, tf=True):
 
 
 def get_rllib_config(seeds, debug=False, stop_iters=50, tf=True):
-    num_agents = 5
-    ACTION_SPACE = KydlandPrescott().action_space
-    OBSERVATION_SPACE = KydlandPrescott().observation_space
-
     stop_config = {
         "training_iteration": 2 if debug else stop_iters,
     }
 
-    env_config = {
-        "num_agents": num_agents,
-    }
-    policies = {
-        "cb": (None, OBSERVATION_SPACE, ACTION_SPACE, {}),
-    }
-
-    def policy_mapping_fn(agent_id, episode, worker, **kwargs):
-        assert agent_id in policies.keys()
-        return str(agent_id)
-
+    env_config = {}
     rllib_config = {
         "env": "kydland",
         "env_config": env_config,
-        "multiagent": {
-            "policies": policies,
-            # "policies": {
-            #    f"agent-{n}": (
-            #        None,
-            #        OBSERVATION_SPACE,
-            #        ACTION_SPACE,
-            #        {},
-            #    ) for n in range(env_config["num_agents"])
-            # },
-            "policy_mapping_fn": policy_mapping_fn,
+        "Q_model": {
+            "fcnet_hiddens": [8, 8],
+            "fcnet_activation": "relu",
+            "post_fcnet_hiddens": [],
+            "post_fcnet_activation": None,
+            "custom_model": None,  # Use this to define custom Q-model(s).
+            "custom_model_config": {},
+        },
+        # Model options for the policy function (see `Q_model` above for details).
+        # The difference to `Q_model` above is that no action concat'ing is
+        # performed before the post_fcnet stack.
+        "policy_model": {
+            "fcnet_hiddens": [8, 8],
+            "fcnet_activation": "relu",
+            "post_fcnet_hiddens": [],
+            "post_fcnet_activation": None,
+            "custom_model": None,  # Use this to define a custom policy model.
+            "custom_model_config": {},
         },
         "seed": tune.grid_search(seeds),
         "callbacks": SimpleCallback,  # log.get_logging_callbacks_class(log_full_epi=True),
         "num_gpus": int(os.environ.get("RLLIB_NUM_GPUS", "0")),
         "framework": "tf" if tf else "torch",
+        "soft_horizon": False,
+        "n_step": 3,
+        "prioritized_replay": True,
+        "initial_alpha": 0.2,
+        "learning_starts": 256,
+        "clip_actions": False,
+        "timesteps_per_iteration": 0,
+        "optimization": {"actor_learning_rate": 0.005, "critic_learning_rate": 0.005, "entropy_learning_rate": 0.0001},
     }
 
     return rllib_config, stop_config

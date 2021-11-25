@@ -26,7 +26,7 @@ class KydlandPrescott(MultiAgentEnv, ABC):
         natural_unemployment=5.5,
     ):
         # gym api
-        self.action_space = gym.spaces.Box(low=float("-inf"), high=float("inf"), shape=[2])
+        self.action_space = gym.spaces.Box(low=-10.0, high=15.0, shape=[2])
         self.observation_space = gym.spaces.Box(low=float("-inf"), high=float("inf"), shape=[5])
 
         # hyperparameter
@@ -72,6 +72,7 @@ class KydlandPrescott(MultiAgentEnv, ABC):
 
     @override(MultiAgentEnv)
     def reset(self):
+        print("Resettttting")
         self.step_count_in_current_episode = 0
         self._reset_hh()
         obs = self._observe()
@@ -122,7 +123,7 @@ class KydlandPrescott(MultiAgentEnv, ABC):
 
         # hh imitate each other
         self._hh_imitate()
-        fraction_beliver = np.mean([isinstance(hh, Believer) for hh in self.hh])
+        fraction_beliver = np.mean([hh.type() == "Believer" for hh in self.hh])
         self.direction_believer = 1 if self.fraction_believer < fraction_beliver else 0
         self.fraction_believer = fraction_beliver
 
@@ -182,13 +183,16 @@ class KydlandPrescott(MultiAgentEnv, ABC):
 
         :return unemployment
         """
-        return self.natural_unemployment - inflation + mean_expectations
+        return min(max(self.natural_unemployment - inflation + mean_expectations, 0.0), 100.0)
 
 
 class Believer(ABC):
     def __init__(self):
         self.utility = 0.0
         self.forecast_costs = 0.0
+
+    def type(self):
+        return self.__class__.__name__
 
     def forecast(self, announced_inflation, natural_unemployment, fraction_believer):
         return announced_inflation
@@ -205,7 +209,7 @@ class NonBeliever(Believer):
     def __init__(self):
         super().__init__()
         self.forecast_error = 0.0
-        self.learning_rate = 0.1
+        self.learning_rate = 0.01
         self.forecast_costs = 3.3
 
     def adapt_forecast(self, inflation, expected_inflation):

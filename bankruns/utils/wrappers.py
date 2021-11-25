@@ -14,6 +14,7 @@ class MultiToSingle(Env):
         self.wrapped_env = env
 
     def step(self, action):
+        print(action)
         agent_name = self.wrapped_env.agents[0]
         action_dict = {agent_name: action}
         observations, rewards, done, infos = self.wrapped_env.step(action_dict)
@@ -21,12 +22,13 @@ class MultiToSingle(Env):
         observations = list(observations[agent_name].values())
         done = done[agent_name]
         infos = infos[agent_name]
+        print(observations, rewards)
         return observations, rewards, done, infos
 
     def reset(self):
         agent_name = self.wrapped_env.agents[0]
         observations = self.wrapped_env.reset()
-        return observations[agent_name]
+        return list(observations[agent_name].values())
 
     def seed(self, seed=None):
         if seed is not None:
