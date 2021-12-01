@@ -1,5 +1,6 @@
-from bankruns.env import Diamond
 import pytest
+
+from bankruns.envs.diamond_continuous import Diamond
 
 
 def test_env():
@@ -20,7 +21,7 @@ def test_env():
 
     # 2 of 5 run
     actions = [1.0, 1.0, 0.0, 0.0, 0.0]
-    rewards = [1.1, 1.1, 28/15, 28/15, 28/15]
+    rewards = [1.1, 1.1, 28 / 15, 28 / 15, 28 / 15]
     obs, rew, done, info = env.step({f"agent-{n}": actions[n] for n in range(5)})
     i = 0
     for agent, r in rew.items():

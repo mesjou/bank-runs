@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from bankruns.q_diamond import run_diamond
+from bankruns.experiments.diamond.q_diamond import run_diamond
 
 cooperation_values = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
 num_agents = 10

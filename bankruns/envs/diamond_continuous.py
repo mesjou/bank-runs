@@ -1,26 +1,21 @@
 import logging
+from abc import ABC
+
 import numpy as np
+from bankruns.utils.interfaces import MultiplePlayersInfo
 from gym.utils import seeding
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
-from bankruns.utils.interfaces import MultiplePlayersInfo
-from abc import ABC
-from ray.rllib.utils.typing import MultiAgentDict
 from ray.rllib.utils import override
-
+from ray.rllib.utils.typing import MultiAgentDict
 
 logger = logging.getLogger(__name__)
 
 
 class Diamond(MultiplePlayersInfo, MultiAgentEnv, ABC):
     """Environment that implements Diamond game. Action=1 means early withdraw, action=0 means hold at bank."""
+
     def __init__(
-            self,
-            num_agents,
-            seed=None,
-            env_name="Diamond",
-            max_steps=100,
-            r=1.1,
-            R=2.0,
+        self, num_agents, seed=None, env_name="Diamond", max_steps=100, r=1.1, R=2.0,
     ):
         self.num_agents = num_agents
         self.agents = [f"agent-{n}" for n in range(self.num_agents)]
@@ -32,7 +27,7 @@ class Diamond(MultiplePlayersInfo, MultiAgentEnv, ABC):
         self.R = R
 
         self.seed(seed)
-        self.metadata = {'name': env_name}
+        self.metadata = {"name": env_name}
 
     @override(MultiAgentEnv)
     def seed(self, seed=None):

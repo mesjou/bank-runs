@@ -1,6 +1,7 @@
-import numpy as np
-from abc import ABC
 import random
+from abc import ABC
+
+import numpy as np
 
 
 class QLearner(ABC):

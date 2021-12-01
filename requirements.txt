@@ -6,4 +6,6 @@ pandas
 torch
 pytest
 tensorboard
-tensorFlow
+tensorflow==2.7.0
+stable-baselines
+tensorflow_probability

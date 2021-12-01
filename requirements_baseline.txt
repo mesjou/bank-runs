@@ -1,0 +1,9 @@
+gym
+numpy
+pettingzoo
+pandas
+pytest
+tensorboard
+stable-baselines3[extra]
+torch
+ray[rllib]

@@ -1,6 +1,6 @@
 import numpy as np
-from bankruns.agents.q_learning import QLearner
-from bankruns.env_discrete import DiamondDiscrete
+from bankruns.envs.diamond_discrete import DiamondDiscrete
+from bankruns.learners.q_learning import QLearner
 
 
 def decay_policy(init_value, end_value, step, end_after):
