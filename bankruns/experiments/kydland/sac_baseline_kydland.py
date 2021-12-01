@@ -4,7 +4,7 @@ import ray
 from bankruns.envs.kydland_prescott import KydlandPrescott
 from bankruns.utils import log, miscellaneous
 from bankruns.utils.callbacks import SimpleCallback
-from bankruns.utils.wrappers import MultiToSingle
+from bankruns.wrappers.env_converter import MultiToSingle
 from ray import tune
 from ray.rllib.agents.sac import SACTrainer
 from ray.tune.registry import register_env

@@ -45,11 +45,13 @@ class KydlandPrescott(MultiAgentEnv, ABC):
         self.hh: List = []
         self.step_count_in_current_episode: int = 0
         self.fraction_believer: float = fraction_believer
+        self.init_fraction_beliver: float = fraction_believer
         self.direction_believer: int = 0
         self.unemployment: float = natural_unemployment
         self.direction_unemployment: int = 0
         self.inflation: float = 0.0
         self.direction_inflation: int = 0
+        self.burn_in: int = 100
 
         # misc
         if seed is not None:
@@ -119,7 +121,8 @@ class KydlandPrescott(MultiAgentEnv, ABC):
         # hh earn utility and update forecast rule
         for hh, expectation in zip(self.hh, expected_inflation):
             hh.set_utility(expectation, inflation)
-            hh.adapt_forecast(inflation, expectation)
+            if self.step_count_in_current_episode >= self.burn_in:
+                hh.adapt_forecast(inflation, expectation)
 
         # hh imitate each other
         self._hh_imitate()
@@ -156,7 +159,7 @@ class KydlandPrescott(MultiAgentEnv, ABC):
 
     def _reset_hh(self):
         self.hh = np.random.choice(
-            [Believer(), NonBeliever()], self.num_hh, p=[self.fraction_believer, 1 - self.fraction_believer]
+            [Believer(), NonBeliever()], self.num_hh, p=[self.init_fraction_beliver, 1 - self.init_fraction_beliver]
         ).tolist()
 
     def _hh_imitate(self):
@@ -183,7 +186,8 @@ class KydlandPrescott(MultiAgentEnv, ABC):
 
         :return unemployment
         """
-        return min(max(self.natural_unemployment - inflation + mean_expectations, 0.0), 100.0)
+        # return min(max(self.natural_unemployment - inflation + mean_expectations, 0.0), 100.0)
+        return self.natural_unemployment - inflation + mean_expectations
 
 
 class Believer(ABC):
@@ -209,7 +213,7 @@ class NonBeliever(Believer):
     def __init__(self):
         super().__init__()
         self.forecast_error = 0.0
-        self.learning_rate = 0.01
+        self.learning_rate = 0.005
         self.forecast_costs = 3.3
 
     def adapt_forecast(self, inflation, expected_inflation):

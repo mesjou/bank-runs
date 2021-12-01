@@ -1,5 +1,5 @@
 from bankruns.envs.kydland_prescott import KydlandPrescott
-from bankruns.utils.wrappers import MultiToSingle
+from bankruns.wrappers.env_converter import MultiToSingle
 
 
 def test_wrapping():

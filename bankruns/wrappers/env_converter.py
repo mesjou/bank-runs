@@ -1,3 +1,4 @@
+import numpy as np
 from gym import Env
 from ray.rllib.env.multi_agent_env import MultiAgentEnv
 
@@ -19,7 +20,7 @@ class MultiToSingle(Env):
         action_dict = {agent_name: action}
         observations, rewards, done, infos = self.wrapped_env.step(action_dict)
         rewards = rewards[agent_name]
-        observations = list(observations[agent_name].values())
+        observations = np.array(list(observations[agent_name].values()), dtype=np.float32)
         done = done[agent_name]
         infos = infos[agent_name]
         print(observations, rewards)
@@ -28,7 +29,7 @@ class MultiToSingle(Env):
     def reset(self):
         agent_name = self.wrapped_env.agents[0]
         observations = self.wrapped_env.reset()
-        return list(observations[agent_name].values())
+        return np.array(list(observations[agent_name].values()), dtype=np.float32)
 
     def seed(self, seed=None):
         if seed is not None:
